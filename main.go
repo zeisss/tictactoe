@@ -34,6 +34,10 @@ var (
 	storageEtcdPeer   = flag.String("storage-etcd-peer", "localhost:4001", "The address to find the etcd peer.")
 	storageEtcdPrefix = flag.String("storage-etcd-prefix", "moinz.de/tictactoe", "The prefix to store the data in.")
 	storageEtcdTtl    = flag.Uint64("storage-etcd-ttl", 365*24*60*60, "How long to keep data in Etcd. Defaults to 1 year.")
+
+	// Lock Manager
+	/// memory
+	lockmanagerMemoryVerbose = flag.Bool("lockmanager-memory-verbose", false, "Print every lock/unlock to stderr.")
 )
 
 func EventLog() service.EventLog {
@@ -80,7 +84,7 @@ func Storage() service.Storage {
 func LockManager() service.LockManager {
 	switch *switchLockManager {
 	case "memory":
-		return lock.New()
+		return lock.New(*lockmanagerMemoryVerbose)
 	default:
 		panic("Unknown lockmanager value: " + *switchLockManager)
 	}

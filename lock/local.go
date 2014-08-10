@@ -7,23 +7,27 @@ import (
 	"time"
 )
 
-func New() *localLockManager {
+func New(verbose bool) *localLockManager {
 	return &localLockManager{
 		logger:    log.New(os.Stderr, "[lock] ", log.LstdFlags),
+		verbose:   verbose,
 		Global:    &sync.Mutex{},
 		GameLocks: make(map[string]*sync.Mutex),
 	}
 }
 
 type localLockManager struct {
-	logger *log.Logger
+	logger  *log.Logger
+	verbose bool
 
 	Global    *sync.Mutex
 	GameLocks map[string]*sync.Mutex
 }
 
 func (lck *localLockManager) LockGame(gameId string, timeout time.Duration) {
-	lck.logger.Printf("Lock:   %s", gameId)
+	if lck.verbose {
+		lck.logger.Printf("Lock:   %s", gameId)
+	}
 
 	lck.Global.Lock()
 	defer lck.Global.Unlock()
@@ -38,7 +42,9 @@ func (lck *localLockManager) LockGame(gameId string, timeout time.Duration) {
 }
 
 func (lck *localLockManager) UnlockGame(gameId string) {
-	lck.logger.Printf("Unlock: %s", gameId)
+	if lck.verbose {
+		lck.logger.Printf("Unlock: %s", gameId)
+	}
 
 	lck.Global.Lock()
 	defer lck.Global.Unlock()

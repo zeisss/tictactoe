@@ -25,15 +25,15 @@ type coresEventLog struct {
 }
 
 func (log *coresEventLog) NewGame(gameId string) {
-	log.Bus.Publish("tictactoed.started", gameId)
+	go log.Bus.Publish("tictactoed.started", gameId)
 }
 
 func (log *coresEventLog) Moved(gameId string) {
-	log.Bus.Publish("tictactoed.moved", gameId)
+	go log.Bus.Publish("tictactoed.moved", gameId)
 }
 
 func (log *coresEventLog) Finished(gameId string) {
-	log.Bus.Publish("tictactoed.finished", gameId)
+	go log.Bus.Publish("tictactoed.finished", gameId)
 }
 
 func (log *coresEventLog) publish(eventName, gameId string) {

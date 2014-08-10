@@ -22,13 +22,13 @@ func (h *Handlers) NewGameHandler(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	gameId, err := h.Service.New()
+	gameID, err := h.Service.New()
 	if err != nil {
 		h.setProcessingError(resp, err)
 	} else {
-		resp.Header().Add("location", "/game/get?game="+gameId)
+		resp.Header().Add("location", "/game/get?game="+gameID)
 		resp.WriteHeader(http.StatusCreated)
-		resp.Write([]byte(gameId))
+		resp.Write([]byte(gameID))
 	}
 }
 
@@ -38,9 +38,9 @@ func (h *Handlers) MoveHandler(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Get GameId (can be taken as is)
-	gameId := req.FormValue("game")
-	if gameId == "" {
+	// Get GameID (can be taken as is)
+	gameID := req.FormValue("game")
+	if gameID == "" {
 		h.setBadRequestError(resp, "No game parameter given.")
 		return
 	}
@@ -82,7 +82,7 @@ func (h *Handlers) MoveHandler(resp http.ResponseWriter, req *http.Request) {
 	}
 
 	// Perform move
-	if err := h.Service.Move(gameId, player, position); err != nil {
+	if err := h.Service.Move(gameID, player, position); err != nil {
 		if service.IsNotFoundError(err) {
 			h.setNotFoundError(resp)
 		} else if service.IsGameFinishedError(err) {
@@ -105,14 +105,14 @@ func (h *Handlers) GetGameHandler(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Get GameId (can be taken as is)
-	gameId := req.FormValue("game")
-	if gameId == "" {
+	// Get GameID (can be taken as is)
+	gameID := req.FormValue("game")
+	if gameID == "" {
 		h.setBadRequestError(resp, "Invalid value for parameter 'game'.")
 		return
 	}
 
-	state, err := h.Service.Get(gameId)
+	state, err := h.Service.Get(gameID)
 	if err != nil {
 		if service.IsNotFoundError(err) {
 			h.setNotFoundError(resp)
