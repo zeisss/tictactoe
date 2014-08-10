@@ -7,7 +7,7 @@ A microservice providing a simple tictactoe game. For storage, memory or etcd ca
 API
 ---
 
-## GET /game/new
+## GET /v1/game/new
 
 Creates a new game and returns the game-id.
 
@@ -21,7 +21,7 @@ Creates a new game and returns the game-id.
 
 			game1
 
-## GET /game/read?game={id}
+## GET /v1/game/read?game={id}
 
 + Response 200 OK
 
@@ -36,7 +36,7 @@ Creates a new game and returns the game-id.
 			"turn": 0
 		}
 
-## POST /game/move?game={id}&player={player}&position={x},{y}
+## POST /v1/game/move?game={id}&player={player}&position={x},{y}
 
 Performs a move for the player onto the given coordinates. Returns a 400er error, if the coordinates or player is illegal. A 404 is the game does not exist. 204 otherwise.
 

@@ -12,11 +12,41 @@ import (
 	"strings"
 )
 
-type Handlers struct {
+type BaseHandler struct {
 	Service *service.TicTacToeService
 }
 
-func (h *Handlers) NewGameHandler(resp http.ResponseWriter, req *http.Request) {
+func (h *BaseHandler) setNotFoundError(resp http.ResponseWriter) {
+	resp.WriteHeader(http.StatusNotFound)
+}
+
+func (h *BaseHandler) setBadRequestError(resp http.ResponseWriter, msg string) {
+	resp.WriteHeader(http.StatusBadRequest)
+	resp.Write([]byte(msg))
+}
+
+func (h *BaseHandler) setProcessingError(resp http.ResponseWriter, err error) {
+	resp.WriteHeader(http.StatusInternalServerError)
+
+	log.Printf("Internal error: %#v\n", err)
+}
+
+func (h *BaseHandler) GameID(resp http.ResponseWriter, req *http.Request) (string, bool) {
+	gameID := req.FormValue("game")
+	if gameID == "" {
+		h.setBadRequestError(resp, "No 'game' parameter given.")
+		return "", false
+	}
+	return gameID, true
+}
+
+// ------------------------
+
+type NewGameHandler struct {
+	BaseHandler
+}
+
+func (h *NewGameHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
 		resp.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -32,20 +62,13 @@ func (h *Handlers) NewGameHandler(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *Handlers) MoveHandler(resp http.ResponseWriter, req *http.Request) {
-	if req.Method != "POST" {
-		resp.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
+// ------------------------
 
-	// Get GameID (can be taken as is)
-	gameID := req.FormValue("game")
-	if gameID == "" {
-		h.setBadRequestError(resp, "No game parameter given.")
-		return
-	}
+type MoveHandler struct {
+	BaseHandler
+}
 
-	// Get player
+func (h *MoveHandler) Player(resp http.ResponseWriter, req *http.Request) (game.Player, bool) {
 	playerParam := req.FormValue("player")
 	var player game.Player = game.NO_PLAYER
 	if playerParam == "player1" {
@@ -54,31 +77,62 @@ func (h *Handlers) MoveHandler(resp http.ResponseWriter, req *http.Request) {
 		player = game.PLAYER_2
 	} else {
 		h.setBadRequestError(resp, "Invalid value for parameter 'player'.")
-		return
+		return game.NO_PLAYER, false
 	}
+	return player, true
+}
 
-	// Get position parameter (..&position=2,2)
+func (h *MoveHandler) Position(resp http.ResponseWriter, req *http.Request) (game.Position, bool) {
+	var result game.Position
+
 	positionParam := req.FormValue("position")
 	positionSplit := strings.Split(positionParam, ",")
 	if len(positionSplit) != 2 {
 		h.setBadRequestError(resp, "Invalid value for parameter 'position'.")
-		return
+		return result, false
 	}
 
 	x, err := strconv.ParseInt(positionSplit[0], 10, 0)
 	if err != nil {
 		h.setBadRequestError(resp, "Invalid value for parameter 'position'.")
-		return
+		return result, false
 	}
 	y, err := strconv.ParseInt(positionSplit[1], 10, 0)
 	if err != nil {
 		h.setBadRequestError(resp, "Invalid value for parameter 'position'.")
+		return result, false
+	}
+
+	result = game.Position{int(x), int(y)}
+	if !result.Valid() {
+		h.setBadRequestError(resp, "Invalid value for parameter 'position'.")
+		return result, false
+	}
+	return result, true
+}
+
+func (h *MoveHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
+	if req.Method != "POST" {
+		resp.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	position := game.Position{int(x), int(y)}
-	if !position.Valid() {
-		h.setBadRequestError(resp, "Invalid value for parameter 'position'.")
+	// Get GameID (can be taken as is)
+	gameID, ok := h.GameID(resp, req)
+	if !ok {
+		return
+	}
+
+	// Get player
+	player, ok := h.Player(resp, req)
+	if !ok {
+		return
+	}
+
+	// Get position parameter (..&position=2,2)
+	position, ok := h.Position(resp, req)
+	if !ok {
+		return
 	}
 
 	// Perform move
@@ -90,7 +144,7 @@ func (h *Handlers) MoveHandler(resp http.ResponseWriter, req *http.Request) {
 		} else if service.IsPositionAlreadyTakenError(err) {
 			h.setBadRequestError(resp, "Position is already taken. Invalid move.")
 		} else if service.IsNotActivePlayerError(err) {
-			h.setBadRequestError(resp, fmt.Sprintf("Invalid move. '%s' is not the active player.", playerParam))
+			h.setBadRequestError(resp, fmt.Sprintf("Invalid move. '%s' is not the active player.", player))
 		} else {
 			h.setProcessingError(resp, err)
 		}
@@ -99,16 +153,21 @@ func (h *Handlers) MoveHandler(resp http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *Handlers) GetGameHandler(resp http.ResponseWriter, req *http.Request) {
+// ------------------------
+
+type GetGameHandler struct {
+	BaseHandler
+}
+
+func (h *GetGameHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 	if req.Method != "GET" {
 		resp.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	// Get GameID (can be taken as is)
-	gameID := req.FormValue("game")
-	if gameID == "" {
-		h.setBadRequestError(resp, "Invalid value for parameter 'game'.")
+	gameID, ok := h.GameID(resp, req)
+	if !ok {
 		return
 	}
 
@@ -137,19 +196,4 @@ func (h *Handlers) GetGameHandler(resp http.ResponseWriter, req *http.Request) {
 	if err := json.NewEncoder(resp).Encode(result); err != nil {
 		panic(err)
 	}
-}
-
-func (h *Handlers) setNotFoundError(resp http.ResponseWriter) {
-	resp.WriteHeader(http.StatusNotFound)
-}
-
-func (h *Handlers) setBadRequestError(resp http.ResponseWriter, msg string) {
-	resp.WriteHeader(http.StatusBadRequest)
-	resp.Write([]byte(msg))
-}
-
-func (h *Handlers) setProcessingError(resp http.ResponseWriter, err error) {
-	resp.WriteHeader(http.StatusInternalServerError)
-
-	log.Printf("Internal error: %#v\n", err)
 }

@@ -100,10 +100,10 @@ func main() {
 
 	ticTacToeService := service.TicTacToeService{idFactory, gameStorage, eventLog, lockManager}
 
-	handlers := Handlers{&ticTacToeService}
-	http.HandleFunc("/game/new", handlers.NewGameHandler)
-	http.HandleFunc("/game/move", handlers.MoveHandler)
-	http.HandleFunc("/game/get", handlers.GetGameHandler)
+	base := BaseHandler{&ticTacToeService}
+	http.Handle("/v1/game/new", &NewGameHandler{base})
+	http.Handle("/v1/game/move", &MoveHandler{base})
+	http.Handle("/v1/game/get", &GetGameHandler{base})
 
 	if err := http.ListenAndServe(*listen, nil); err != nil {
 		panic(err)
