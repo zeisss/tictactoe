@@ -21,7 +21,7 @@ Creates a new game and returns the game-id.
 
 			game1
 
-## GET /v1/game/read?game={id}
+## POST /v1/game/read?game={id}
 
 + Response 200 OK
 
